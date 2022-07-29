@@ -1,10 +1,10 @@
-# data-analytics-app-architecture-aws
+# Introduction
 
-A simple example of auto-scalable and cost-efficient architecture for a data analytics application on AWS. 
+In this article I am going to explain a simple example of auto-scalable and cost-efficient architecture on AWS for a typical data analytics application. The use case can be described as:
 
-## Use case
-
-An application has REST API to post data, launch analysis jobs on this data, and get the result. Analysis job consumes a lot of memory and CPU resources and can take up to 20 minutes to finish. Clients launch analysis jobs unpredictably and can launch multiple jobs at once causing load spikes. We need to design an auto-scalable and cost efficient architecture of such application.
+```
+An application has REST API to post data, launch analysis jobs on this data, and get the result. Analysis job consumes a lot of memory and CPU resources and can take up to 30 minutes to finish. Clients launch analysis jobs unpredictably and can launch multiple jobs at once causing load spikes. We need to design an auto-scalable and cost efficient architecture of such application.
+```
 
 ## First approach: Monolyth straitforward solution
 
@@ -16,7 +16,7 @@ However such approach has several disadvantages
 
 ### 1. Uneven instance load
 
-We can get unlucky and majority of the jobs en up on one instance. Since job resource consumption is unproportionally heavy compared to processing REST requests, instance performance will degrade heavily. Even though one instance is running on the edge consuming 100% of resources, from the cluster perspective only 50% of resources are consumed so scale-up does not happen. This can result in slow response times for requests that keep hitting the loaded instance and eventually the cluster can kill instance if it stops responding. This will result in job loss.
+We can get unlucky and majority of the jobs end up on one instance. Since processing jobs need unproportionally larger amount of resources compared to processing REST requests, instance performance will degrade heavily. Even though one instance is running on the edge, consuming 100% of resources, from the cluster perspective only 50% of resources are consumed, so scale-up does not happen (in case we configured to scale up only when >75% of the resources are used). This can result in slow response times for requests that hit the loaded instance and eventually the cluster can kill the instance if it stops responding. This will result in job loss.
 
 ![Uneven load issue](./diagrams/monolyth-issue-uneven-load.png)
 
@@ -28,9 +28,9 @@ Even if jobs are distributed evenly, we can fill all instances' capacity quickly
 
 ### 3. Job loss on random instance failure
 
-Even if jobs are distributed evenly and we don’t get heavy job spikes, we can still loose submitted jobs. AWS explicitly says that ECS instances might die time to time [add reference], which means we can loose unfinished jobs. 
+Even if jobs are distributed evenly and we don’t get heavy job spikes, we can still loose submitted jobs. AWS explicitly says that ECS instances might die time to time and guarantees [99.99% uptime](https://aws.amazon.com/compute/sla/) (~1 hour downtime per year), which means we can loose unfinished jobs sometimes. 
 
-![Slowdown on job spike](./diagrams/monolyth-issue-job-loss.png)
+![Job loss](./diagrams/monolyth-issue-job-loss.png)
 
 ## Second approach: split into 2 services
 
@@ -38,9 +38,9 @@ Even if jobs are distributed evenly and we don’t get heavy job spikes, we can 
 
 This architecture is much better, since we can scale workers independently and they will not slow down our API. We now use a job queue so jobs will never be lost even if worker dies for some reason. And yet there is still a problem.
 
-### 1. Job termination during scale-down
+### 1. Job termination during scale-in
 
-When we have a job spike, auto-scaling group increases the amount of workers. Once the queue is empty some workers will become idle. So auto-scaling group will start scaling-down, since we don't need that many worker any longer. However, in the current implementation of AWS auto-scaling group does not understand which instances are idle and which are not [add reference]. It might send a kill signal to an instance that runs an unfinished job. We could use lambda instead, but here we immediately run into a limitation of lambda runtime: the longest AWS lambda can run is 15 min. Some of our heavy jobs will never be finished.
+When we have a job spike, auto-scaling group increases the amount of workers. Once the job-queue is empty some workers will become idle. So auto-scaling group will start scaling-in, since we don't need that many workers any longer. Current options for [instance scale-in protection](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-instance-protection.html#instance-protection-instance) is not trivial and does not guarantee then working task is never terminated. It might send a kill signal to an instance that runs an unfinished job. One solution would be to use lambda instead, but the longest AWS lambda can run is 15 min which is a showstopper for us. Some of our heavy jobs will never be processed if we use lambda.
 
 ![Job termination issue](./diagrams/services-issue-job-termination.png)
 
@@ -48,4 +48,9 @@ When we have a job spike, auto-scaling group increases the amount of workers. On
 
 ![Final solution](./diagrams/services-with-orchestrator.png)
 
-We write our own orchestrator that will scale-up worker instances if the queue grows, but it will never scale them down. Instead, worker will simply terminate itself if there are no messages to consume from the job queue. This is a simple solution that guarantees no unnecessary job terminations (unless instance dies unexpectedly) and no idle workers.
+If AWS does not provide us with a proper scale-in protection, then we write our own orchestrator that will scale-up worker instances if the queue grows, but it will never scale them in. Instead, worker will simply terminate itself if there are no messages to consume from the job queue. This is a simple solution that guarantees no unnecessary job terminations (unless instance dies unexpectedly) and no idle workers.
+
+
+# Implementation
+
+You can find implementation of the described architection in[this github repository](https://github.com/pavradev/data-analytics-app-architecture-aws)
