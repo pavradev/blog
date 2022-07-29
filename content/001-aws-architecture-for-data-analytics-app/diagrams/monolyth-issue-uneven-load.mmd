@@ -1,0 +1,7 @@
+flowchart LR
+style app1 fill:red
+lb[LB] --> app1(Application 100%) & app2(Application 0%)
+subgraph c1 [ECS auto scaling cluster 50%]
+    app1
+    app2
+end

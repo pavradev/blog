@@ -1,0 +1,6 @@
+flowchart LR
+lb[LB] --> app1(Application) & app2(Application)
+subgraph c1 [ECS auto scaling cluster]
+    app1
+    app2
+end

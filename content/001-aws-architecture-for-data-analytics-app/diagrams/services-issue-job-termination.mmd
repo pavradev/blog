@@ -1,0 +1,13 @@
+flowchart LR
+style w1 fill:red
+lb[LB] --> api1(API) & api2(API) --push--> q1
+subgraph c1 [ECS cluster]
+    api1
+    api2
+end
+q1[sqs queue] --pull--> w1
+subgraph c2 [ECS auto scaling cluster 50%]
+    w2[Idle Worker 0%]
+    w1[Active Worker 100%]
+end
+p1((planner)) --kill--> w1 

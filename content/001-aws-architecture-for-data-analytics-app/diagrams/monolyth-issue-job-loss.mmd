@@ -1,0 +1,8 @@
+flowchart LR
+style app1 fill:grey
+lb[LB] -.X.-> app1("Application (dead)") 
+lb[LB] -->  app2(API)
+subgraph c1 [ECS auto scaling cluster]
+    app1
+    app2
+end
