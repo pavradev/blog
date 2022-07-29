@@ -2,8 +2,7 @@
 
 In this article I am going to explain a simple example of auto-scalable and cost-efficient architecture on AWS for a typical data analytics application. The use case can be described as:
 
-| --- |
-| An application has REST API to post data, launch analysis jobs on this data, and get the result. Analysis job consumes a lot of memory and CPU resources and can take up to 30 minutes to finish. Clients launch analysis jobs unpredictably and can launch multiple jobs at once causing load spikes. We need to design an auto-scalable and cost efficient architecture of such application. |
+"An application has REST API to post data, launch analysis jobs on this data, and get the result. Analysis job consumes a lot of memory and CPU resources and can take up to 30 minutes to finish. Clients launch analysis jobs unpredictably and can launch multiple jobs at once causing load spikes. We need to design an auto-scalable and cost efficient architecture of such application."
 
 
 ## First approach: Monolyth straitforward solution
