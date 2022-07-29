@@ -2,9 +2,8 @@
 
 In this article I am going to explain a simple example of auto-scalable and cost-efficient architecture on AWS for a typical data analytics application. The use case can be described as:
 
-```
-An application has REST API to post data, launch analysis jobs on this data, and get the result. Analysis job consumes a lot of memory and CPU resources and can take up to 30 minutes to finish. Clients launch analysis jobs unpredictably and can launch multiple jobs at once causing load spikes. We need to design an auto-scalable and cost efficient architecture of such application.
-```
+`An application has REST API to post data, launch analysis jobs on this data, and get the result. Analysis job consumes a lot of memory and CPU resources and can take up to 30 minutes to finish. Clients launch analysis jobs unpredictably and can launch multiple jobs at once causing load spikes. We need to design an auto-scalable and cost efficient architecture of such application.`
+
 
 ## First approach: Monolyth straitforward solution
 
@@ -40,7 +39,7 @@ This architecture is much better, since we can scale workers independently and t
 
 ### 1. Job termination during scale-in
 
-When we have a job spike, auto-scaling group increases the amount of workers. Once the job-queue is empty some workers will become idle. So auto-scaling group will start scaling-in, since we don't need that many workers any longer. Current options for [instance scale-in protection](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-instance-protection.html#instance-protection-instance) is not trivial and does not guarantee then working task is never terminated. It might send a kill signal to an instance that runs an unfinished job. One solution would be to use lambda instead, but the longest AWS lambda can run is 15 min which is a showstopper for us. Some of our heavy jobs will never be processed if we use lambda.
+When we have a job spike, auto-scaling group increases the amount of workers. Once the job-queue is empty some workers will become idle. So auto-scaling group will start scaling-in, since we don't need that many workers any longer. Current options for [instance scale-in protection](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-instance-protection.html#instance-protection-instance) is not trivial and does not guarantee that a working task is never terminated. So it might send a kill signal to an instance that runs an unfinished job. One solution would be to use lambda instead, but AWS lambda can run max 15 minutes, which is a showstopper for us. Some of our heavy jobs will never be processed if we use lambda.
 
 ![Job termination issue](./diagrams/services-issue-job-termination.png)
 
@@ -53,4 +52,4 @@ If AWS does not provide us with a proper scale-in protection, then we write our 
 
 # Implementation
 
-You can find implementation of the described architection in[this github repository](https://github.com/pavradev/data-analytics-app-architecture-aws)
+You can find implementation of the described architection in [this github repository](https://github.com/pavradev/data-analytics-app-architecture-aws)
